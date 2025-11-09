@@ -1,0 +1,125 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #a8e6cf;
+  font-family: 'Arial Rounded MT Bold', 'Arial', sans-serif;
+  touch-action: none;
+}
+
+.screen {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #a8e6cf;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Стартовый экран */
+#puppySelect {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+}
+#puppySelect img {
+  width: 80px;
+  height: 80px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+#puppySelect img:hover,
+#puppySelect img.selected {
+  border-color: #2c3e50;
+  transform: scale(1.1);
+}
+
+/* Игровой экран */
+#gameScreen {
+  background: #8fd6b0;
+}
+#score, #timer {
+  position: absolute;
+  top: 10px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #2c3e50;
+  background: rgba(255,255,255,0.7);
+  padding: 4px 10px;
+  border-radius: 8px;
+  z-index: 15;
+}
+#timer {
+  right: 10px;
+  left: auto;
+}
+#player {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Анимация вспышки */
+.collect-flash {
+  position: absolute;
+  pointer-events: none;
+  z-index: 20;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(255,255,200,0.9), transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  animation: flash 0.6s forwards;
+}
+
+@keyframes flash {
+  0% { transform: scale(0.3); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+/* Финальный экран */
+#endScreen {
+  background: rgba(0,0,0,0.8);
+  color: white;
+  text-align: center;
+}
+#endScreen h2 {
+  font-size: 28px;
+  margin-bottom: 15px;
+}
+#endScreen p {
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+.btn {
+  padding: 12px 24px;
+  margin: 8px;
+  font-size: 18px;
+  border: none;
+  border-radius: 10px;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+}
+.btn.exit {
+  background: #f44336;
+}

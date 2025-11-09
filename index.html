@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Щенячий патруль: Собери мусор!</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Стартовый экран -->
+  <div id="startScreen" class="screen">
+    <h1>Выбери щенка!</h1>
+    <div id="puppySelect">
+      <img src="images/rocky.png" data-puppy="rocky" alt="Рокки">
+      <img src="images/chase.png" data-puppy="chase" alt="Чейз">
+      <img src="images/marshall.png" data-puppy="marshall" alt="Маршалл">
+      <img src="images/rubble.png" data-puppy="rubble" alt="Раббл">
+      <img src="images/skye.png" data-puppy="skye" alt="Скай">
+    </div>
+  </div>
+
+  <!-- Игровой экран -->
+  <div id="gameScreen" class="screen hidden">
+    <div id="score">Счёт: 0</div>
+    <div id="timer">Время: 30</div>
+    <div id="player"></div>
+  </div>
+
+  <!-- Финальный экран -->
+  <div id="endScreen" class="screen hidden">
+    <h2>Игра окончена!</h2>
+    <p>Ты собрал <span id="finalScore">0</span> мусора! 🐾</p>
+    <button class="btn" id="restartBtn">Играть снова</button>
+    <button class="btn exit" id="exitBtn">Выход</button>
+  </div>
+
+  <!-- Звуки -->
+  <audio id="soundCollect" src="sounds/collect.mp3" preload="auto"></audio>
+  <audio id="soundStart" src="sounds/game-start.mp3" preload="auto"></audio>
+  <audio id="soundEnd" src="sounds/game-end.mp3" preload="auto"></audio>
+
+  <script src="script.js"></script>
+</body>
+</html>
