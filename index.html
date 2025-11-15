@@ -9,31 +9,31 @@
 <body>
 
   <!-- Стартовый экран -->
-    <div id="startScreen" class="screen">
-  <h1>Выбери щенка!</h1>
-  <div id="puppySelect">
-    <img src="images/rocky.png" data-puppy="rocky" alt="Рокки">
-    <img src="images/chase.png" data-puppy="chase" alt="Чейз">
-    <img src="images/marshall.png" data-puppy="marshall" alt="Маршалл">
-    <img src="images/rubble.png" data-puppy="rubble" alt="Раббл">
-    <img src="images/skye.png" data-puppy="skye" alt="Скай">
-  </div>
+  <div id="startScreen" class="screen">
+    <h1>Выбери щенка!</h1>
+    <div id="puppySelect">
+      <img src="images/rocky.png" data-puppy="rocky" alt="Рокки">
+      <img src="images/chase.png" data-puppy="chase" alt="Чейз">
+      <img src="images/marshall.png" data-puppy="marshall" alt="Маршалл">
+      <img src="images/rubble.png" data-puppy="rubble" alt="Раббл">
+      <img src="images/skye.png" data-puppy="skye" alt="Скай">
+    </div>
 
-  <h2 style="margin-top: 20px;">Режим игры:</h2>
-  <div id="modeSelect">
-    <button class="mode-btn active" data-mode="falling">Падает сверху</button>
-    <button class="mode-btn" data-mode="to-center">Со всех сторон</button>
-    <button class="mode-btn" data-mode="static">Неподвижный мусор</button>
-  </div>
+    <h2 style="margin-top: 20px; font-size: 20px;">Режим игры:</h2>
+    <div id="modeSelect">
+      <button class="mode-btn active" data-mode="falling">Падает сверху</button>
+      <button class="mode-btn" data-mode="to-center">Со всех сторон</button>
+      <button class="mode-btn" data-mode="static">Неподвижный мусор</button>
+    </div>
 
-  <button id="startGameBtn" class="btn start-btn" disabled>Начать игру</button>
-</div>
+    <button id="startGameBtn" class="btn start-btn" disabled>Начать игру</button>
   </div>
 
   <!-- Игровой экран -->
   <div id="gameScreen" class="screen hidden">
     <div id="score">Счёт: 0</div>
     <div id="timer">Время: 30</div>
+    <div id="volumeBtn" class="volume-btn">🔊</div>
     <div id="player"></div>
   </div>
 
@@ -49,6 +49,7 @@
   <audio id="soundCollect" src="sounds/collect.mp3" preload="auto"></audio>
   <audio id="soundStart" src="sounds/game-start.mp3" preload="auto"></audio>
   <audio id="soundEnd" src="sounds/game-end.mp3" preload="auto"></audio>
+  <audio id="soundBgMusic" src="sounds/bg-music.mp3" preload="auto" loop></audio>
 
   <script src="script.js"></script>
 </body>
