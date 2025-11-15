@@ -11,13 +11,25 @@
   <!-- Стартовый экран -->
   <div id="startScreen" class="screen">
     <h1>Выбери щенка!</h1>
-    <div id="puppySelect">
-      <img src="images/rocky.png" data-puppy="rocky" alt="Рокки">
-      <img src="images/chase.png" data-puppy="chase" alt="Чейз">
-      <img src="images/marshall.png" data-puppy="marshall" alt="Маршалл">
-      <img src="images/rubble.png" data-puppy="rubble" alt="Раббл">
-      <img src="images/skye.png" data-puppy="skye" alt="Скай">
-    </div>
+    <div id="startScreen" class="screen">
+  <h1>Выбери щенка!</h1>
+  <div id="puppySelect">
+    <img src="images/rocky.png" data-puppy="rocky" alt="Рокки">
+    <img src="images/chase.png" data-puppy="chase" alt="Чейз">
+    <img src="images/marshall.png" data-puppy="marshall" alt="Маршалл">
+    <img src="images/rubble.png" data-puppy="rubble" alt="Раббл">
+    <img src="images/skye.png" data-puppy="skye" alt="Скай">
+  </div>
+
+  <h2 style="margin-top: 20px;">Режим игры:</h2>
+  <div id="modeSelect">
+    <button class="mode-btn active" data-mode="falling">Падает сверху</button>
+    <button class="mode-btn" data-mode="to-center">Со всех сторон</button>
+    <button class="mode-btn" data-mode="static">Неподвижный мусор</button>
+  </div>
+
+  <button id="startGameBtn" class="btn start-btn" disabled>Начать игру</button>
+</div>
   </div>
 
   <!-- Игровой экран -->
