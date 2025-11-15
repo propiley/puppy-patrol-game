@@ -123,3 +123,35 @@ body {
 .btn.exit {
   background: #f44336;
 }
+/* Выбор режима */
+#modeSelect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 15px;
+  max-width: 90%;
+}
+.mode-btn {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 2px solid #ccc;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mode-btn.active {
+  border-color: #4CAF50;
+  background: #e8f5e9;
+  font-weight: bold;
+}
+.start-btn {
+  margin-top: 20px;
+  padding: 10px 24px;
+  font-size: 18px;
+}
+.start-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
