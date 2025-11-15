@@ -8,17 +8,22 @@ const timerEl = document.getElementById('timer');
 const finalScoreEl = document.getElementById('finalScore');
 const restartBtn = document.getElementById('restartBtn');
 const exitBtn = document.getElementById('exitBtn');
+const startGameBtn = document.getElementById('startGameBtn');
+const modeButtons = document.querySelectorAll('.mode-btn');
 
 // Звуки
 const soundCollect = document.getElementById('soundCollect');
 const soundStart = document.getElementById('soundStart');
 const soundEnd = document.getElementById('soundEnd');
+const soundBgMusic = document.getElementById('soundBgMusic');
 
 let selectedPuppy = null;
+let selectedMode = 'falling'; // 'falling', 'to-center', 'static'
 let score = 0;
 let timeLeft = 30;
 let gameActive = false;
 let gameLoop;
+let musicEnabled = true;
 
 // Картинки щенков
 const puppyImages = {
@@ -37,11 +42,24 @@ const trashTypes = [
   { name: 'box',    sizeRange: [45, 70] }
 ];
 
-// Вспомогательная функция воспроизведения звука
+// Воспроизведение звука
 function playSound(audioEl) {
   if (!audioEl) return;
   audioEl.currentTime = 0;
-  audioEl.play().catch(e => console.log("Звук отключён:", e));
+  audioEl.play().catch(e => console.log("Звук заблокирован:", e));
+}
+
+// Переключение фоновой музыки
+function toggleMusic() {
+  musicEnabled = !musicEnabled;
+  const btn = document.getElementById('volumeBtn');
+  if (musicEnabled) {
+    soundBgMusic.play().catch(e => console.log("Музыка заблокирована:", e));
+    if (btn) btn.textContent = '🔊';
+  } else {
+    soundBgMusic.pause();
+    if (btn) btn.textContent = '🔇';
+  }
 }
 
 // === ВЫБОР ЩЕНКА ===
@@ -50,18 +68,38 @@ document.querySelectorAll('#puppySelect img').forEach(img => {
     document.querySelectorAll('#puppySelect img').forEach(el => el.classList.remove('selected'));
     img.classList.add('selected');
     selectedPuppy = img.dataset.puppy;
-    startGame();
+    checkStartReady();
   });
 });
 
+// === ВЫБОР РЕЖИМА ===
+modeButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    modeButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedMode = btn.dataset.mode;
+    checkStartReady();
+  });
+});
+
+function checkStartReady() {
+  if (selectedPuppy && selectedMode) {
+    startGameBtn.disabled = false;
+  }
+}
+
+startGameBtn.addEventListener('click', startGame);
+
 // === СТАРТ ИГРЫ ===
 function startGame() {
-  if (!selectedPuppy) return;
+  if (!selectedPuppy || !selectedMode) return;
 
   playSound(soundStart);
+  if (musicEnabled) {
+    soundBgMusic.play().catch(e => console.log("Музыка заблокирована:", e));
+  }
 
   playerEl.style.backgroundImage = `url(${puppyImages[selectedPuppy]})`;
-
   startScreen.classList.add('hidden');
   gameScreen.classList.remove('hidden');
 
@@ -71,10 +109,8 @@ function startGame() {
   scoreEl.textContent = 'Счёт: 0';
   timerEl.textContent = 'Время: 30';
 
-  // Очистка
   document.querySelectorAll('.trash, .collect-flash').forEach(el => el.remove());
 
-  // Таймер
   clearInterval(window.gameTimer);
   window.gameTimer = setInterval(() => {
     timeLeft--;
@@ -82,15 +118,13 @@ function startGame() {
     if (timeLeft <= 0) endGame();
   }, 1000);
 
-  // Генерация мусора
   clearInterval(window.trashSpawner);
-  window.trashSpawner = setInterval(spawnTrash, 800); // чаще, т.к. мусор уходит вниз
+  window.trashSpawner = setInterval(spawnTrash, selectedMode === 'static' ? 1200 : 800);
 
-  // Запуск проверки
   gameLoop = requestAnimationFrame(checkCollection);
 }
 
-// === ДВИЖЕНИЕ ИГРОКА ===
+// === УПРАВЛЕНИЕ ЩЕНКОМ ===
 function movePlayer(x, y) {
   if (!gameActive) return;
   const rx = Math.max(0, Math.min(window.innerWidth - 60, x - 30));
@@ -109,7 +143,7 @@ gameScreen.addEventListener('mousemove', e => {
   if (e.buttons === 1) movePlayer(e.clientX, e.clientY);
 });
 
-// === СОЗДАНИЕ МУСОРА С ДВИЖЕНИЕМ ===
+// === СОЗДАНИЕ МУСОРА (3 РЕЖИМА) ===
 function spawnTrash() {
   if (!gameActive) return;
 
@@ -125,39 +159,89 @@ function spawnTrash() {
   trash.style.width = size + 'px';
   trash.style.height = size + 'px';
   trash.style.background = `url(images/trash_${type.name}.png) center/contain no-repeat`;
-  trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
-  trash.style.top = -size + 'px';
   gameScreen.appendChild(trash);
 
-  const speed = 0.8 + Math.random() * 1.2;
-  const drift = (Math.random() - 0.5) * 0.5;
+  if (selectedMode === 'static') {
+    // Режим 3: неподвижный мусор
+    trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
+    trash.style.top = Math.random() * (window.innerHeight - size - 80) + 'px';
+    setTimeout(() => {
+      if (trash.parentNode === gameScreen) trash.remove();
+    }, 4000 + Math.random() * 2000);
 
-  function move() {
-    if (!gameActive || !trash.parentNode) return;
+  } else if (selectedMode === 'to-center') {
+    // Режим 2: со всех сторон к центру
+    const side = Math.floor(Math.random() * 4);
+    let x, y;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
 
-    let top = parseFloat(trash.style.top) || 0;
-    let left = parseFloat(trash.style.left) || 0;
-
-    top += speed;
-    left += drift;
-    left = Math.max(0, Math.min(window.innerWidth - size, left));
-
-    trash.style.top = top + 'px';
-    trash.style.left = left + 'px';
-
-    if (top > window.innerHeight) {
-      trash.remove();
-      return;
+    switch (side) {
+      case 0: x = Math.random() * window.innerWidth; y = -size; break; // сверху
+      case 1: x = window.innerWidth + size; y = Math.random() * window.innerHeight; break; // справа
+      case 2: x = Math.random() * window.innerWidth; y = window.innerHeight + size; break; // снизу
+      case 3: x = -size; y = Math.random() * window.innerHeight; break; // слева
     }
 
-    requestAnimationFrame(move);
+    trash.style.left = x + 'px';
+    trash.style.top = y + 'px';
+
+    const dx = (cx - x) / 150;
+    const dy = (cy - y) / 150;
+
+    function move() {
+      if (!gameActive || !trash.parentNode) return;
+      let curX = parseFloat(trash.style.left) || 0;
+      let curY = parseFloat(trash.style.top) || 0;
+      curX += dx;
+      curY += dy;
+      trash.style.left = curX + 'px';
+      trash.style.top = curY + 'px';
+
+      // Удалить, если далеко от центра (защита)
+      const dist = Math.hypot(curX - cx, curY - cy);
+      if (dist > Math.hypot(cx, cy) + 200) {
+        trash.remove();
+        return;
+      }
+
+      requestAnimationFrame(move);
+    }
+    move();
+
+    setTimeout(() => {
+      if (trash.parentNode === gameScreen) trash.remove();
+    }, 8000);
+
+  } else {
+    // Режим 1: падает сверху (как раньше)
+    trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
+    trash.style.top = -size + 'px';
+
+    const speed = 0.8 + Math.random() * 1.2;
+    const drift = (Math.random() - 0.5) * 0.5;
+
+    function move() {
+      if (!gameActive || !trash.parentNode) return;
+      let top = parseFloat(trash.style.top) || 0;
+      let left = parseFloat(trash.style.left) || 0;
+      top += speed;
+      left += drift;
+      left = Math.max(0, Math.min(window.innerWidth - size, left));
+      trash.style.top = top + 'px';
+      trash.style.left = left + 'px';
+      if (top > window.innerHeight) {
+        trash.remove();
+        return;
+      }
+      requestAnimationFrame(move);
+    }
+    move();
+
+    setTimeout(() => {
+      if (trash.parentNode === gameScreen) trash.remove();
+    }, 8000);
   }
-
-  move();
-
-  setTimeout(() => {
-    if (trash.parentNode === gameScreen) trash.remove();
-  }, 8000);
 }
 
 // === ПРОВЕРКА СБОРА ===
@@ -174,16 +258,13 @@ function checkCollection() {
       playerRect.top < trashRect.bottom &&
       playerRect.bottom > trashRect.top
     ) {
-      // Вспышка
       const flash = document.createElement('div');
       flash.className = 'collect-flash';
       flash.style.left = (trashRect.left + trashRect.width / 2 - 40) + 'px';
       flash.style.top = (trashRect.top + trashRect.height / 2 - 40) + 'px';
       document.body.appendChild(flash);
-
       setTimeout(() => flash.remove(), 600);
 
-      // Звук и очки
       playSound(soundCollect);
       const points = parseInt(trash.dataset.points) || 1;
       score += points;
@@ -204,6 +285,7 @@ function endGame() {
   cancelAnimationFrame(gameLoop);
 
   playSound(soundEnd);
+  soundBgMusic.pause();
 
   finalScoreEl.textContent = score;
   gameScreen.classList.add('hidden');
@@ -215,9 +297,15 @@ restartBtn.addEventListener('click', () => {
   endScreen.classList.add('hidden');
   startScreen.classList.remove('hidden');
   document.querySelectorAll('#puppySelect img').forEach(el => el.classList.remove('selected'));
+  modeButtons.forEach(btn => btn.classList.remove('active'));
+  modeButtons[0].classList.add('active'); // по умолчанию — falling
   selectedPuppy = null;
+  selectedMode = 'falling';
+  startGameBtn.disabled = true;
 });
 
 exitBtn.addEventListener('click', () => {
-  // Можно оставить или перенаправить
+  // можно оставить пустым
 });
+
+document.getElementById('volumeBtn')?.addEventListener('click', toggleMusic);
