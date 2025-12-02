@@ -11,8 +11,6 @@ const exitBtn = document.getElementById('exitBtn');
 const startGameBtn = document.getElementById('startGameBtn');
 const modeButtons = document.querySelectorAll('.mode-btn');
 const mazeEl = document.getElementById('maze');
-const joystickEl = document.getElementById('joystick');
-const joystickKnob = document.getElementById('joystick-knob');
 
 // Звуки
 const soundCollect = document.getElementById('soundCollect');
@@ -27,9 +25,6 @@ let timeLeft = 30;
 let gameActive = false;
 let gameLoop;
 let musicEnabled = true;
-let moveInterval;
-let joystickActive = false;
-let joystickOffset = { x: 0, y: 0 };
 
 // Лабиринт
 let maze = [];
@@ -96,45 +91,7 @@ function checkStartReady() {
   startGameBtn.disabled = !(selectedPuppy && selectedMode);
 }
 
-// Управление джойстиком
-function setupJoystick() {
-  const radius = 40;
-  const startDrag = (clientX, clientY) => {
-    joystickActive = true;
-    updateJoystick(clientX, clientY);
-  };
-  const moveDrag = (clientX, clientY) => {
-    if (joystickActive) updateJoystick(clientX, clientY);
-  };
-  const stopDrag = () => {
-    if (!joystickActive) return;
-    joystickActive = false;
-    joystickOffset = { x: 0, y: 0 };
-    joystickKnob.style.transform = 'translate(-50%, -50%)';
-  };
-  joystickEl.addEventListener('touchstart', e => { e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY); });
-  window.addEventListener('touchmove', e => { if (joystickActive) { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); }});
-  window.addEventListener('touchend', stopDrag);
-  joystickEl.addEventListener('mousedown', e => startDrag(e.clientX, e.clientY));
-  window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
-  window.addEventListener('mouseup', stopDrag);
-  function updateJoystick(clientX, clientY) {
-    const rect = joystickEl.getBoundingClientRect();
-    const centerX = rect.left + radius;
-    const centerY = rect.top + radius;
-    let x = clientX - centerX;
-    let y = clientY - centerY;
-    const distance = Math.hypot(x, y);
-    if (distance > radius) {
-      x = (x / distance) * radius;
-      y = (y / distance) * radius;
-    }
-    joystickOffset = { x, y };
-    joystickKnob.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
-  }
-}
-
-// Лабиринт
+// === Лабиринт ===
 function generateMaze() {
   maze = Array(mazeSize).fill().map(() => Array(mazeSize).fill(1));
   for (let y = 1; y < mazeSize - 1; y++) {
@@ -176,8 +133,9 @@ function renderMaze() {
       if (x === playerPos.x && y === playerPos.y) {
         const img = document.createElement('img');
         img.src = puppyImages[selectedPuppy];
-        img.style.width = '24px';
-        img.style.height = '24px';
+        img.style.width = '80%';
+        img.style.height = '80%';
+        img.style.objectFit = 'contain';
         cell.appendChild(img);
       }
       mazeEl.appendChild(cell);
@@ -185,60 +143,118 @@ function renderMaze() {
   }
 }
 
-function startMazeGame() {
-  clearInterval(moveInterval);
-  moveInterval = setInterval(() => {
+let touchStartCell = null;
+
+function setupMazeControls() {
+  // Касание
+  mazeEl.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const touch = e.touches[0];
+    touchStartCell = getCellFromTouch(touch.clientX, touch.clientY);
+  });
+
+  mazeEl.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!touchStartCell) return;
+    const touch = e.touches[0];
+    const currentCell = getCellFromTouch(touch.clientX, touch.clientY);
+    if (currentCell && currentCell !== touchStartCell) {
+      movePlayerToCell(currentCell);
+      touchStartCell = currentCell;
+    }
+  });
+
+  mazeEl.addEventListener('touchend', () => {
+    touchStartCell = null;
+  });
+
+  // Клавиши
+  window.addEventListener('keydown', e => {
     if (!gameActive || selectedMode !== 'maze') return;
-    const sensitivity = 20;
-    let moved = false;
-    if (Math.abs(joystickOffset.x) > sensitivity || Math.abs(joystickOffset.y) > sensitivity) {
-      if (Math.abs(joystickOffset.x) > Math.abs(joystickOffset.y)) {
-        const dir = joystickOffset.x > 0 ? 1 : -1;
-        const newX = playerPos.x + dir;
-        if (newX >= 0 && newX < mazeSize && maze[playerPos.y][newX] === 0) {
-          playerPos.x = newX;
-          moved = true;
-        }
-      } else {
-        const dir = joystickOffset.y > 0 ? 1 : -1;
-        const newY = playerPos.y + dir;
-        if (newY >= 0 && newY < mazeSize && maze[newY][playerPos.x] === 0) {
-          playerPos.y = newY;
-          moved = true;
-        }
-      }
+    let dx = 0, dy = 0;
+    switch (e.key) {
+      case 'ArrowUp': case 'w': case 'W': dy = -1; break;
+      case 'ArrowDown': case 's': case 'S': dy = 1; break;
+      case 'ArrowLeft': case 'a': case 'A': dx = -1; break;
+      case 'ArrowRight': case 'd': case 'D': dx = 1; break;
+      default: return;
     }
-    if (moved) {
+    const newX = playerPos.x + dx;
+    const newY = playerPos.y + dy;
+    if (newX >= 0 && newX < mazeSize && newY >= 0 && newY < mazeSize && maze[newY][newX] === 0) {
+      playerPos.x = newX;
+      playerPos.y = newY;
       renderMaze();
-      const cellIndex = playerPos.y * mazeSize + playerPos.x;
-      const cell = mazeEl.children[cellIndex];
-      if (cell && cell.dataset.trash) {
-        delete cell.dataset.trash;
-        cell.textContent = '';
-        score += 2;
-        scoreEl.textContent = `Счёт: ${score}`;
-        playSound(soundCollect);
-        playerEl.classList.add('collect-jump');
-        setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
-      }
-      if (playerPos.x === exitPos.x && playerPos.y === exitPos.y) {
-        score += 10;
-        scoreEl.textContent = `Счёт: ${score}`;
-        setTimeout(() => {
-          alert('Ты нашёл выход! 🎉');
-          endGame();
-        }, 300);
-      }
+      checkMazeCollect();
     }
-  }, 150);
+  });
 }
 
-// Обычные режимы
+function getCellFromTouch(clientX, clientY) {
+  const rect = mazeEl.getBoundingClientRect();
+  const cellSize = rect.width / mazeSize;
+  const x = Math.floor((clientX - rect.left) / cellSize);
+  const y = Math.floor((clientY - rect.top) / cellSize);
+  if (x >= 0 && x < mazeSize && y >= 0 && y < mazeSize) {
+    return { x, y };
+  }
+  return null;
+}
+
+function movePlayerToCell(cell) {
+  if (cell && maze[cell.y][cell.x] === 0) {
+    playerPos.x = cell.x;
+    playerPos.y = cell.y;
+    renderMaze();
+    checkMazeCollect();
+  }
+}
+
+function checkMazeCollect() {
+  const cellIndex = playerPos.y * mazeSize + playerPos.x;
+  const cell = mazeEl.children[cellIndex];
+  if (cell && cell.dataset.trash) {
+    delete cell.dataset.trash;
+    cell.textContent = '';
+    score += 2;
+    scoreEl.textContent = `Счёт: ${score}`;
+    playSound(soundCollect);
+    playerEl.classList.add('collect-jump');
+    setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
+  }
+
+  if (playerPos.x === exitPos.x && playerPos.y === exitPos.y) {
+    score += 10;
+    scoreEl.textContent = `Счёт: ${score}`;
+    setTimeout(() => {
+      alert('Ты нашёл выход! 🎉');
+      endGame();
+    }, 300);
+  }
+}
+
+function startMazeGame() {
+  generateMaze();
+  playerPos = { x: 1, y: 1 };
+  renderMaze();
+  setupMazeControls();
+
+  clearInterval(window.gameTimer);
+  window.gameTimer = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = `Время: ${timeLeft}`;
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+}
+
+// === Обычные режимы ===
 function spawnTrash() {
   if (!gameActive || selectedMode === 'maze') return;
+
   const type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
   const [minSize, maxSize] = type.sizeRange;
   const size = Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
+
   const trash = document.createElement('div');
   trash.className = 'trash';
   trash.dataset.type = type.name;
@@ -248,6 +264,7 @@ function spawnTrash() {
   trash.style.height = size + 'px';
   trash.style.background = `url(images/trash_${type.name}.png) center/contain no-repeat`;
   gameScreen.appendChild(trash);
+
   if (selectedMode === 'static') {
     trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
     trash.style.top = Math.random() * (window.innerHeight - size - 80) + 'px';
@@ -357,7 +374,7 @@ gameScreen.addEventListener('mousemove', e => {
   if (selectedMode !== 'maze' && e.buttons === 1) movePlayer(e.clientX, e.clientY);
 });
 
-// Старт и конец
+// Старт игры
 startGameBtn.addEventListener('click', startGame);
 
 function startGame() {
@@ -374,23 +391,13 @@ function startGame() {
   scoreEl.textContent = 'Счёт: 0';
   timerEl.textContent = `Время: ${timeLeft}`;
   document.querySelectorAll('.trash, .collect-flash').forEach(el => el.remove());
+
   if (selectedMode === 'maze') {
     playerEl.style.display = 'none';
-    joystickEl.style.display = 'block';
-    generateMaze();
-    playerPos = { x: 1, y: 1 };
-    renderMaze();
-    setupJoystick();
+    mazeEl.style.display = 'block';
     startMazeGame();
-    clearInterval(window.gameTimer);
-    window.gameTimer = setInterval(() => {
-      timeLeft--;
-      timerEl.textContent = `Время: ${timeLeft}`;
-      if (timeLeft <= 0) endGame();
-    }, 1000);
   } else {
     playerEl.style.display = 'block';
-    joystickEl.style.display = 'none';
     mazeEl.style.display = 'none';
     playerEl.style.backgroundImage = `url(${puppyImages[selectedPuppy]})`;
     clearInterval(window.gameTimer);
@@ -405,11 +412,11 @@ function startGame() {
   }
 }
 
+// Конец игры
 function endGame() {
   gameActive = false;
   clearInterval(window.gameTimer);
   clearInterval(window.trashSpawner);
-  clearInterval(moveInterval);
   cancelAnimationFrame(gameLoop);
   playSound(soundEnd);
   soundBgMusic.pause();
@@ -428,7 +435,6 @@ restartBtn.addEventListener('click', () => {
   selectedPuppy = null;
   selectedMode = 'falling';
   startGameBtn.disabled = true;
-  joystickEl.style.display = 'none';
   mazeEl.style.display = 'none';
 });
 
