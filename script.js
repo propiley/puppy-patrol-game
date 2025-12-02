@@ -254,13 +254,13 @@ function checkMazeCollect() {
     scoreEl.textContent = `Счёт: ${score}`;
     playSound(soundCollect);
     playerEl.classList.add('collect-jump');
-    setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
+    setout(() => playerEl.classList.remove('collect-jump'), 300);
   }
 
   if (playerPos.x === exitPos.x && playerPos.y === exitPos.y) {
     score += 10;
     scoreEl.textContent = `Счёт: ${score}`;
-    setTimeout(() => {
+    setout(() => {
       alert('Ты нашёл выход! 🎉');
       endGame();
     }, 300);
@@ -273,8 +273,8 @@ function startMazeGame() {
   renderMaze();
   setupMazeControls();
 
-  clearInterval(window.gameTimer);
-  window.gameTimer = setInterval(() => {
+  clearInterval(window.gamer);
+  window.gamer = setInterval(() => {
     timeLeft--;
     timerEl.textContent = `Время: ${timeLeft}`;
     if (timeLeft <= 0) endGame();
@@ -417,7 +417,7 @@ function startGame() {
   startScreen.classList.add('hidden');
   gameScreen.classList.remove('hidden');
   score = 0;
-  timeLeft = selectedMode === 'maze' ? 60 : 30;
+  timeLeft = selectedMode === 'maze' ? 90 : 30; // 90 секунд для 15×15
   gameActive = true;
   scoreEl.textContent = 'Счёт: 0';
   timerEl.textContent = `Время: ${timeLeft}`;
