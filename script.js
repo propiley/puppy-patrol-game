@@ -28,7 +28,7 @@ let musicEnabled = true;
 
 // Лабиринт
 let maze = [];
-let trashPositions = []; // ← добавлено
+let trashPositions = [];
 const mazeSize = 10;
 let playerPos = { x: 1, y: 1 };
 let exitPos = { x: mazeSize - 2, y: mazeSize - 2 };
@@ -42,7 +42,7 @@ const puppyImages = {
   skye: 'images/skye.png',
 };
 
-// Типы мусора (для других режимов)
+// Типы мусора
 const trashTypes = [
   { name: 'can',    sizeRange: [35, 55] },
   { name: 'bag',    sizeRange: [40, 60] },
@@ -281,6 +281,209 @@ function startMazeGame() {
   }, 1000);
 }
 
-// === Остальной код без изменений ===
-// (spawnTrash, checkCollection, movePlayer, startGame, и т.д. — остаются как в предыдущей версии)
-// ... (остальной код тот же, что и выше)
+// === ОБЫЧНЫЕ РЕЖИМЫ ===
+function spawnTrash() {
+  if (!gameActive || selectedMode === 'maze') return;
+
+  const type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
+  const [minSize, maxSize] = type.sizeRange;
+  const size = Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
+
+  const trash = document.createElement('div');
+  trash.className = 'trash';
+  trash.dataset.type = type.name;
+  trash.dataset.points = Math.floor(size / 10);
+  trash.style.position = 'absolute';
+  trash.style.width = size + 'px';
+  trash.style.height = size + 'px';
+  trash.style.background = `url(images/trash_${type.name}.png) center/contain no-repeat`;
+  gameScreen.appendChild(trash);
+
+  if (selectedMode === 'static') {
+    trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
+    trash.style.top = Math.random() * (window.innerHeight - size - 80) + 'px';
+    setTimeout(() => { if (trash.parentNode === gameScreen) trash.remove(); }, 4000 + Math.random() * 2000);
+  } else if (selectedMode === 'to-center') {
+    const side = Math.floor(Math.random() * 4);
+    let x, y;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    switch (side) {
+      case 0: x = Math.random() * window.innerWidth; y = -size; break;
+      case 1: x = window.innerWidth + size; y = Math.random() * window.innerHeight; break;
+      case 2: x = Math.random() * window.innerWidth; y = window.innerHeight + size; break;
+      case 3: x = -size; y = Math.random() * window.innerHeight; break;
+    }
+    trash.style.left = x + 'px';
+    trash.style.top = y + 'px';
+    const dx = (cx - x) / 150;
+    const dy = (cy - y) / 150;
+    function move() {
+      if (!gameActive || !trash.parentNode) return;
+      let curX = parseFloat(trash.style.left) || 0;
+      let curY = parseFloat(trash.style.top) || 0;
+      curX += dx;
+      curY += dy;
+      trash.style.left = curX + 'px';
+      trash.style.top = curY + 'px';
+      const dist = Math.hypot(curX - cx, curY - cy);
+      if (dist > Math.hypot(cx, cy) + 200) { trash.remove(); return; }
+      requestAnimationFrame(move);
+    }
+    move();
+    setTimeout(() => { if (trash.parentNode === gameScreen) trash.remove(); }, 8000);
+  } else { // falling
+    trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
+    trash.style.top = -size + 'px';
+    const speed = 0.8 + Math.random() * 1.2;
+    const drift = (Math.random() - 0.5) * 0.5;
+    function move() {
+      if (!gameActive || !trash.parentNode) return;
+      let top = parseFloat(trash.style.top) || 0;
+      let left = parseFloat(trash.style.left) || 0;
+      top += speed;
+      left += drift;
+      left = Math.max(0, Math.min(window.innerWidth - size, left));
+      trash.style.top = top + 'px';
+      trash.style.left = left + 'px';
+      if (top > window.innerHeight) { trash.remove(); return; }
+      requestAnimationFrame(move);
+    }
+    move();
+    setTimeout(() => { if (trash.parentNode === gameScreen) trash.remove(); }, 8000);
+  }
+}
+
+function checkCollection() {
+  if (!gameActive || selectedMode === 'maze') return;
+  const trashes = document.querySelectorAll('.trash');
+  const playerRect = playerEl.getBoundingClientRect();
+  trashes.forEach(trash => {
+    const trashRect = trash.getBoundingClientRect();
+    if (
+      playerRect.left < trashRect.right &&
+      playerRect.right > trashRect.left &&
+      playerRect.top < trashRect.bottom &&
+      playerRect.bottom > trashRect.top
+    ) {
+      const flash = document.createElement('div');
+      flash.className = 'collect-flash';
+      flash.style.left = (trashRect.left + trashRect.width / 2 - 40) + 'px';
+      flash.style.top = (trashRect.top + trashRect.height / 2 - 40) + 'px';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 600);
+      playSound(soundCollect);
+      const points = parseInt(trash.dataset.points) || 1;
+      score += points;
+      scoreEl.textContent = `Счёт: ${score}`;
+      playerEl.classList.add('collect-jump');
+      setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
+      trash.remove();
+    }
+  });
+  gameLoop = requestAnimationFrame(checkCollection);
+}
+
+function movePlayer(x, y) {
+  if (!gameActive || selectedMode === 'maze') return;
+  const rx = Math.max(0, Math.min(window.innerWidth - 60, x - 30));
+  const ry = Math.max(0, Math.min(window.innerHeight - 60, y - 30));
+  playerEl.style.left = rx + 'px';
+  playerEl.style.top = ry + 'px';
+}
+
+gameScreen.addEventListener('touchmove', e => {
+  if (selectedMode !== 'maze') {
+    e.preventDefault();
+    movePlayer(e.touches[0].clientX, e.touches[0].clientY);
+  }
+});
+
+gameScreen.addEventListener('mousedown', e => {
+  if (selectedMode !== 'maze') movePlayer(e.clientX, e.clientY);
+});
+
+gameScreen.addEventListener('mousemove', e => {
+  if (selectedMode !== 'maze' && e.buttons === 1) movePlayer(e.clientX, e.clientY);
+});
+
+// === СТАРТ ИГРЫ ===
+function startGame() {
+  if (!selectedPuppy || !selectedMode) return;
+  playSound(soundStart);
+  if (musicEnabled) {
+    soundBgMusic.play().catch(e => console.log("Музыка заблокирована:", e));
+  }
+  startScreen.classList.add('hidden');
+  gameScreen.classList.remove('hidden');
+  score = 0;
+  timeLeft = selectedMode === 'maze' ? 60 : 30;
+  gameActive = true;
+  scoreEl.textContent = 'Счёт: 0';
+  timerEl.textContent = `Время: ${timeLeft}`;
+  document.querySelectorAll('.trash, .collect-flash').forEach(el => el.remove());
+
+  if (selectedMode === 'maze') {
+    playerEl.style.display = 'none';
+    mazeEl.style.display = 'block';
+    startMazeGame();
+  } else {
+    playerEl.style.display = 'block';
+    mazeEl.style.display = 'none';
+    playerEl.style.backgroundImage = `url(${puppyImages[selectedPuppy]})`;
+    clearInterval(window.gameTimer);
+    window.gameTimer = setInterval(() => {
+      timeLeft--;
+      timerEl.textContent = `Время: ${timeLeft}`;
+      if (timeLeft <= 0) endGame();
+    }, 1000);
+    clearInterval(window.trashSpawner);
+    window.trashSpawner = setInterval(spawnTrash, selectedMode === 'static' ? 1200 : 800);
+    gameLoop = requestAnimationFrame(checkCollection);
+  }
+}
+
+// === КОНЕЦ ИГРЫ ===
+function endGame() {
+  gameActive = false;
+  clearInterval(window.gameTimer);
+  clearInterval(window.trashSpawner);
+  cancelAnimationFrame(gameLoop);
+  playSound(soundEnd);
+  soundBgMusic.pause();
+  finalScoreEl.textContent = score;
+  gameScreen.classList.add('hidden');
+  endScreen.classList.remove('hidden');
+}
+
+// === КНОПКИ ===
+startGameBtn.addEventListener('click', startGame);
+
+restartBtn.addEventListener('click', () => {
+  endScreen.classList.add('hidden');
+  startScreen.classList.remove('hidden');
+  document.querySelectorAll('#puppySelect img').forEach(el => el.classList.remove('selected'));
+  modeButtons.forEach(btn => btn.classList.remove('active'));
+  modeButtons[0].classList.add('active');
+  selectedPuppy = null;
+  selectedMode = 'falling';
+  startGameBtn.disabled = true;
+  mazeEl.style.display = 'none';
+});
+
+exitBtn.addEventListener('click', () => {});
+
+document.getElementById('volumeBtn')?.addEventListener('click', toggleMusic);
+
+// Анимация прыжка
+const style = document.createElement('style');
+style.textContent = `
+  #player.collect-jump {
+    animation: puppyJump 0.3s ease-out;
+  }
+  @keyframes puppyJump {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+`;
+document.head.appendChild(style);
