@@ -50,7 +50,9 @@ body {
 
 /* Игровой экран */
 #gameScreen {
-  background: #8fd6b0;
+  overflow: auto; /* или visible */
+  display: block;
+}
 }
 #score, #timer {
   position: absolute;
