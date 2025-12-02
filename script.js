@@ -39,7 +39,7 @@ const puppyImages = {
   marshall: 'images/marshall.png',
   rubble: 'images/rubble.png',
   skye: 'images/skye.png',
-  // poket: 'images/poket.png' // Раскомментируй, если нужен
+  // poket: 'images/poket.png'
 };
 
 // Типы мусора — ТВОИ ИМЕНА ФАЙЛОВ
@@ -92,21 +92,50 @@ function checkStartReady() {
   startGameBtn.disabled = !(selectedPuppy && selectedMode);
 }
 
-// === Лабиринт ===
+// === Лабиринт — БЕЛЫЙ ФОН, ТОНКИЕ СТЕНКИ ===
 function generateMaze() {
   maze = Array(mazeSize).fill().map(() => Array(mazeSize).fill(1));
-  for (let y = 1; y < mazeSize - 1; y++) {
-    for (let x = 1; x < mazeSize - 1; x++) {
-      maze[y][x] = 0;
+  const stack = [{ x: 1, y: 1 }];
+  maze[1][1] = 0;
+
+  while (stack.length > 0) {
+    const current = stack[stack.length - 1];
+    const neighbors = [];
+    const dirs = [
+      { dx: 0, dy: -2 },
+      { dx: 2, dy: 0 },
+      { dx: 0, dy: 2 },
+      { dx: -2, dy: 0 }
+    ];
+
+    for (let dir of dirs) {
+      const nx = current.x + dir.dx;
+      const ny = current.y + dir.dy;
+      if (nx >= 1 && nx < mazeSize - 1 && ny >= 1 && ny < mazeSize - 1 && maze[ny][nx] === 1) {
+        neighbors.push({ x: nx, y: ny, wallX: current.x + dir.dx/2, wallY: current.y + dir.dy/2 });
+      }
+    }
+
+    if (neighbors.length > 0) {
+      const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+      maze[next.y][next.x] = 0;
+      maze[next.wallY][next.wallX] = 0;
+      stack.push(next);
+    } else {
+      stack.pop();
     }
   }
-  for (let i = 0; i < 15; i++) {
+
+  let exitFound = false;
+  while (!exitFound) {
     const x = Math.floor(Math.random() * (mazeSize - 2)) + 1;
     const y = Math.floor(Math.random() * (mazeSize - 2)) + 1;
-    if ((x !== 1 || y !== 1) && !(x === exitPos.x && y === exitPos.y)) {
-      maze[y][x] = 1;
+    if (maze[y][x] === 0 && !(x === 1 && y === 1)) {
+      exitPos = { x, y };
+      exitFound = true;
     }
   }
+
   maze[1][1] = 0;
   maze[exitPos.y][exitPos.x] = 0;
 }
@@ -144,29 +173,15 @@ function renderMaze() {
   }
 }
 
-let touchStartCell = null;
-
 function setupMazeControls() {
-  // Касание
+  // Касание — щёлкаем по клетке
   mazeEl.addEventListener('touchstart', e => {
     e.preventDefault();
     const touch = e.touches[0];
-    touchStartCell = getCellFromTouch(touch.clientX, touch.clientY);
-  });
-
-  mazeEl.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (!touchStartCell) return;
-    const touch = e.touches[0];
-    const currentCell = getCellFromTouch(touch.clientX, touch.clientY);
-    if (currentCell && currentCell !== touchStartCell) {
-      movePlayerToCell(currentCell);
-      touchStartCell = currentCell;
+    const cell = getCellFromTouch(touch.clientX, touch.clientY);
+    if (cell) {
+      movePlayerToCell(cell);
     }
-  });
-
-  mazeEl.addEventListener('touchend', () => {
-    touchStartCell = null;
   });
 
   // Клавиши
@@ -203,11 +218,15 @@ function getCellFromTouch(clientX, clientY) {
 }
 
 function movePlayerToCell(cell) {
-  if (cell && maze[cell.y][cell.x] === 0) {
-    playerPos.x = cell.x;
-    playerPos.y = cell.y;
-    renderMaze();
-    checkMazeCollect();
+  const dx = Math.abs(cell.x - playerPos.x);
+  const dy = Math.abs(cell.y - playerPos.y);
+  if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+    if (maze[cell.y][cell.x] === 0) {
+      playerPos.x = cell.x;
+      playerPos.y = cell.y;
+      renderMaze();
+      checkMazeCollect();
+    }
   }
 }
 
@@ -263,7 +282,7 @@ function spawnTrash() {
   trash.style.position = 'absolute';
   trash.style.width = size + 'px';
   trash.style.height = size + 'px';
-  trash.style.background = `url(images/trash_${type.name}.png) center/contain no-repeat`; // ← ТВОИ ИМЕНА!
+  trash.style.background = `url(images/trash_${type.name}.png) center/contain no-repeat`;
   gameScreen.appendChild(trash);
 
   if (selectedMode === 'static') {
