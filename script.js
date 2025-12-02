@@ -164,8 +164,8 @@ function generateMaze() {
 
 function renderMaze() {
   mazeEl.innerHTML = '';
-  mazeEl.style.gridTemplateColumns = `repeat(${mazeSize}, 1fr)`;
-mazeEl.style.gridTemplateRows = `repeat(${mazeSize}, 1fr)`;
+  mazeEl.style.gridTemplateColumns = `repeat(${mazeSize}, 30px)`;
+  mazeEl.style.gridTemplateRows = `repeat(${mazeSize}, 30px)`;
 
   for (let y = 0; y < mazeSize; y++) {
     for (let x = 0; x < mazeSize; x++) {
@@ -176,6 +176,34 @@ mazeEl.style.gridTemplateRows = `repeat(${mazeSize}, 1fr)`;
       } else {
         cell.classList.add('path');
       }
+
+      // Мусор
+      if (maze[y][x] === 0 && Math.random() > 0.8 && !(x === 1 && y === 1) && !(x === exitPos.x && y === exitPos.y)) {
+        cell.dataset.trash = '1';
+        cell.textContent = '🗑️';
+        cell.classList.add('trash-maze');
+      }
+
+      // Выход
+      if (x === exitPos.x && y === exitPos.y) {
+        cell.classList.add('exit');
+        cell.textContent = '🚪';
+      }
+
+      // Игрок
+      if (x === playerPos.x && y === playerPos.y) {
+        cell.classList.add('player-maze');
+        const img = document.createElement('img');
+        img.src = puppyImages[selectedPuppy];
+        img.style.width = '24px';
+        img.style.height = '24px';
+        cell.appendChild(img);
+      }
+
+      mazeEl.appendChild(cell);
+    }
+  }
+}
 
       // Мусор (20% клеток)
       if (maze[y][x] === 0 && Math.random() > 0.8 && !(x === 1 && y === 1) && !(x === exitPos.x && y === exitPos.y)) {
