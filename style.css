@@ -157,7 +157,7 @@ body {
   cursor: not-allowed;
 }
 
-/* === ЛАБИРИНТ — БЕЛЫЙ ФОН, ТОНКИЕ СТЕНКИ === */
+/* === ЛАБИРИНТ — ПРАВИЛЬНЫЙ СТИЛЬ === */
 #maze {
   position: absolute;
   top: 50%;
@@ -187,12 +187,14 @@ body {
   position: relative;
 }
 
+/* Стенки — только у клеток-стен */
 .wall {
-  border: 2px solid #333;
+  background: #333;
 }
 
+/* Проходы — просто белые клетки (без линий) */
 .path {
-  /* Без границы — проход */
+  /* Нет фона, нет границы */
 }
 
 .player-maze {
@@ -206,4 +208,22 @@ body {
   color: #4caf50;
   font-weight: bold;
   border: 2px solid #4caf50;
+}
+
+/* Кнопка громкости */
+.volume-btn {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 20;
+  user-select: none;
 }
