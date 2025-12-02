@@ -32,16 +32,17 @@ const mazeSize = 10;
 let playerPos = { x: 1, y: 1 };
 let exitPos = { x: mazeSize - 2, y: mazeSize - 2 };
 
-// Щенки
+// Щенки — ТВОИ ИМЕНА ФАЙЛОВ
 const puppyImages = {
   rocky: 'images/rocky.png',
   chase: 'images/chase.png',
   marshall: 'images/marshall.png',
   rubble: 'images/rubble.png',
-  skye: 'images/skye.png'
+  skye: 'images/skye.png',
+  // poket: 'images/poket.png' // Раскомментируй, если нужен
 };
 
-// Типы мусора
+// Типы мусора — ТВОИ ИМЕНА ФАЙЛОВ
 const trashTypes = [
   { name: 'can',    sizeRange: [35, 55] },
   { name: 'bag',    sizeRange: [40, 60] },
@@ -262,7 +263,7 @@ function spawnTrash() {
   trash.style.position = 'absolute';
   trash.style.width = size + 'px';
   trash.style.height = size + 'px';
-  trash.style.background = `url(images/trash_${type.name}.png) center/contain no-repeat`;
+  trash.style.background = `url(images/trash_${type.name}.png) center/contain no-repeat`; // ← ТВОИ ИМЕНА!
   gameScreen.appendChild(trash);
 
   if (selectedMode === 'static') {
