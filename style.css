@@ -157,21 +157,21 @@ body {
   cursor: not-allowed;
 }
 
-/* === ЛАБИРИНТ — ПРАВИЛЬНЫЙ СТИЛЬ === */
+/* === ЛАБИРИНТ — БОЛЬШОЙ И СЛОЖНЫЙ === */
 #maze {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   display: none;
-  grid-template-columns: repeat(10, 1fr);
-  grid-template-rows: repeat(10, 1fr);
+  grid-template-columns: repeat(15, 1fr); /* 15 колонок */
+  grid-template-rows: repeat(15, 1fr);     /* 15 строк */
   gap: 0;
   background: white;
   padding: 6px;
   border-radius: 12px;
   z-index: 5;
-  width: min(90vw, 90vh, 600px);
+  width: min(90vw, 90vh, 700px); /* ← увеличен до 700px */
   aspect-ratio: 1;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
@@ -187,14 +187,12 @@ body {
   position: relative;
 }
 
-/* Стенки — только у клеток-стен */
 .wall {
   background: #333;
 }
 
-/* Проходы — просто белые клетки (без линий) */
 .path {
-  /* Нет фона, нет границы */
+  /* Без фона — белая клетка */
 }
 
 .player-maze {
