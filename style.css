@@ -50,9 +50,7 @@ body {
 
 /* Игровой экран */
 #gameScreen {
-  overflow: auto; /* или visible */
   display: block;
-}
 }
 #score, #timer {
   position: absolute;
@@ -125,6 +123,7 @@ body {
 .btn.exit {
   background: #f44336;
 }
+
 /* Выбор режима */
 #modeSelect {
   display: flex;
@@ -157,37 +156,38 @@ body {
   background: #cccccc;
   cursor: not-allowed;
 }
-/* Лабиринт — адаптивный */
+
+/* === ЛАБИРИНТ === */
 #maze {
   position: absolute;
   top: 50px;
   left: 50%;
   transform: translateX(-50%);
-  display: grid;
+  display: none; /* скрыт по умолчанию */
+  grid-template-columns: repeat(10, 30px);
+  grid-template-rows: repeat(10, 30px);
   gap: 2px;
   background: #333;
   padding: 6px;
   border-radius: 10px;
   z-index: 5;
-  /* Явно задаём размер */
   width: fit-content;
   max-width: 90vw;
-  margin: 0 auto;
 }
 
 .maze-cell {
-  width: clamp(20px, 8vw, 36px); /* Адаптивный размер */
-  height: clamp(20px, 8vw, 36px);
+  width: 30px;
+  height: 30px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: clamp(12px, 5vw, 20px);
+  font-size: 20px;
   border-radius: 4px;
 }
 
 .wall { background: #5d4037; }
 .path { background: #cfd8dc; }
-.player-maze { background: transparent !important; z-index: 10; }
+.player-maze { background: transparent !important; }
 .trash-maze { background: transparent !important; }
 .exit { background: #4caf50; color: white; font-weight: bold; }
 
@@ -200,7 +200,7 @@ body {
   height: 80px;
   background: rgba(0,0,0,0.3);
   border-radius: 50%;
-  display: none; /* скрыт по умолчанию */
+  display: none;
   z-index: 30;
 }
 
@@ -214,4 +214,22 @@ body {
   border-radius: 50%;
   transform: translate(-50%, -50%);
   cursor: pointer;
+}
+
+/* Кнопка громкости */
+.volume-btn {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  cursor: pointer;
+  z-index: 20;
+  user-select: none;
 }
