@@ -155,27 +155,32 @@ body {
   background: #cccccc;
   cursor: not-allowed;
 }
-/* Лабиринт */
+/* Лабиринт — адаптивный */
 #maze {
   position: absolute;
   top: 50px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
   display: grid;
   gap: 2px;
   background: #333;
-  padding: 4px;
-  border-radius: 8px;
+  padding: 6px;
+  border-radius: 10px;
+  justify-content: center;
+  align-content: center;
   z-index: 5;
+  max-width: 90vw;
+  margin: 0 auto;
 }
 
 .maze-cell {
-  width: 30px;
-  height: 30px;
+  width: clamp(20px, 8vw, 36px); /* Адаптивный размер */
+  height: clamp(20px, 8vw, 36px);
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 18px;
+  font-size: clamp(12px, 5vw, 20px);
+  border-radius: 4px;
 }
 
 .wall { background: #5d4037; }
