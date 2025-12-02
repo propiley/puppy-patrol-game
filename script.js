@@ -25,6 +25,12 @@ let gameActive = false;
 let gameLoop;
 let musicEnabled = true;
 
+// Лабиринт
+let maze = [];
+let mazeSize = 10; // 10x10
+let playerPos = { x: 1, y: 1 };
+let exitPos = { x: mazeSize - 2, y: mazeSize - 2 };
+
 // Картинки щенков
 const puppyImages = {
   rocky: 'images/rocky.png',
