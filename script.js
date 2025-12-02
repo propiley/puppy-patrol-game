@@ -156,6 +156,7 @@ function generateMaze() {
 function renderMaze() {
   mazeEl.style.display = 'grid';
   mazeEl.innerHTML = '';
+
   for (let y = 0; y < mazeSize; y++) {
     for (let x = 0; x < mazeSize; x++) {
       const cell = document.createElement('div');
