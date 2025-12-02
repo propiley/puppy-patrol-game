@@ -10,6 +10,9 @@ const restartBtn = document.getElementById('restartBtn');
 const exitBtn = document.getElementById('exitBtn');
 const startGameBtn = document.getElementById('startGameBtn');
 const modeButtons = document.querySelectorAll('.mode-btn');
+const mazeEl = document.getElementById('maze');
+const joystickEl = document.getElementById('joystick');
+const joystickKnob = document.getElementById('joystick-knob');
 
 // Звуки
 const soundCollect = document.getElementById('soundCollect');
@@ -18,20 +21,23 @@ const soundEnd = document.getElementById('soundEnd');
 const soundBgMusic = document.getElementById('soundBgMusic');
 
 let selectedPuppy = null;
-let selectedMode = 'falling'; // 'falling', 'to-center', 'static'
+let selectedMode = 'falling'; // falling, to-center, static, maze
 let score = 0;
 let timeLeft = 30;
 let gameActive = false;
 let gameLoop;
 let musicEnabled = true;
+let moveInterval;
+let joystickActive = false;
+let joystickOffset = { x: 0, y: 0 };
 
 // Лабиринт
 let maze = [];
-let mazeSize = 10; // 10x10
+const mazeSize = 10;
 let playerPos = { x: 1, y: 1 };
 let exitPos = { x: mazeSize - 2, y: mazeSize - 2 };
 
-// Картинки щенков
+// Щенки
 const puppyImages = {
   rocky: 'images/rocky.png',
   chase: 'images/chase.png',
@@ -40,7 +46,7 @@ const puppyImages = {
   skye: 'images/skye.png'
 };
 
-// Типы мусора
+// Типы мусора (для режимов кроме лабиринта)
 const trashTypes = [
   { name: 'can',    sizeRange: [35, 55] },
   { name: 'bag',    sizeRange: [40, 60] },
@@ -48,14 +54,13 @@ const trashTypes = [
   { name: 'box',    sizeRange: [45, 70] }
 ];
 
-// Воспроизведение звука
+// === Вспомогательные функции ===
 function playSound(audioEl) {
   if (!audioEl) return;
   audioEl.currentTime = 0;
   audioEl.play().catch(e => console.log("Звук заблокирован:", e));
 }
 
-// Переключение фоновой музыки
 function toggleMusic() {
   musicEnabled = !musicEnabled;
   const btn = document.getElementById('volumeBtn');
@@ -68,7 +73,7 @@ function toggleMusic() {
   }
 }
 
-// === ВЫБОР ЩЕНКА ===
+// === Выбор щенка и режима ===
 document.querySelectorAll('#puppySelect img').forEach(img => {
   img.addEventListener('click', () => {
     document.querySelectorAll('#puppySelect img').forEach(el => el.classList.remove('selected'));
@@ -78,7 +83,6 @@ document.querySelectorAll('#puppySelect img').forEach(img => {
   });
 });
 
-// === ВЫБОР РЕЖИМА ===
 modeButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     modeButtons.forEach(b => b.classList.remove('active'));
@@ -89,69 +93,178 @@ modeButtons.forEach(btn => {
 });
 
 function checkStartReady() {
-  if (selectedPuppy && selectedMode) {
-    startGameBtn.disabled = false;
+  startGameBtn.disabled = !(selectedPuppy && selectedMode);
+}
+
+// === Управление джойстиком ===
+function setupJoystick() {
+  const radius = 40;
+
+  const startDrag = (clientX, clientY) => {
+    joystickActive = true;
+    updateJoystick(clientX, clientY);
+  };
+
+  const moveDrag = (clientX, clientY) => {
+    if (joystickActive) updateJoystick(clientX, clientY);
+  };
+
+  const stopDrag = () => {
+    if (!joystickActive) return;
+    joystickActive = false;
+    joystickOffset = { x: 0, y: 0 };
+    joystickKnob.style.transform = 'translate(-50%, -50%)';
+  };
+
+  // Касание
+  joystickEl.addEventListener('touchstart', e => { e.preventDefault(); startDrag(e.touches[0].clientX, e.touches[0].clientY); });
+  window.addEventListener('touchmove', e => { if (joystickActive) { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); }});
+  window.addEventListener('touchend', stopDrag);
+
+  // Мышь
+  joystickEl.addEventListener('mousedown', e => startDrag(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+  window.addEventListener('mouseup', stopDrag);
+
+  function updateJoystick(clientX, clientY) {
+    const rect = joystickEl.getBoundingClientRect();
+    const centerX = rect.left + radius;
+    const centerY = rect.top + radius;
+    let x = clientX - centerX;
+    let y = clientY - centerY;
+    const distance = Math.hypot(x, y);
+    if (distance > radius) {
+      x = (x / distance) * radius;
+      y = (y / distance) * radius;
+    }
+    joystickOffset = { x, y };
+    joystickKnob.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
   }
 }
 
-startGameBtn.addEventListener('click', startGame);
-
-// === СТАРТ ИГРЫ ===
-function startGame() {
-  if (!selectedPuppy || !selectedMode) return;
-
-  playSound(soundStart);
-  if (musicEnabled) {
-    soundBgMusic.play().catch(e => console.log("Музыка заблокирована:", e));
+// === Лабиринт ===
+function generateMaze() {
+  maze = Array(mazeSize).fill().map(() => Array(mazeSize).fill(1));
+  for (let y = 1; y < mazeSize - 1; y++) {
+    for (let x = 1; x < mazeSize - 1; x++) {
+      maze[y][x] = 0;
+    }
   }
-
-  playerEl.style.backgroundImage = `url(${puppyImages[selectedPuppy]})`;
-  startScreen.classList.add('hidden');
-  gameScreen.classList.remove('hidden');
-
-  score = 0;
-  timeLeft = 30;
-  gameActive = true;
-  scoreEl.textContent = 'Счёт: 0';
-  timerEl.textContent = 'Время: 30';
-
-  document.querySelectorAll('.trash, .collect-flash').forEach(el => el.remove());
-
-  clearInterval(window.gameTimer);
-  window.gameTimer = setInterval(() => {
-    timeLeft--;
-    timerEl.textContent = `Время: ${timeLeft}`;
-    if (timeLeft <= 0) endGame();
-  }, 1000);
-
-  clearInterval(window.trashSpawner);
-  window.trashSpawner = setInterval(spawnTrash, selectedMode === 'static' ? 1200 : 800);
-
-  gameLoop = requestAnimationFrame(checkCollection);
+  // Случайные стены
+  for (let i = 0; i < 15; i++) {
+    const x = Math.floor(Math.random() * (mazeSize - 2)) + 1;
+    const y = Math.floor(Math.random() * (mazeSize - 2)) + 1;
+    if ((x !== 1 || y !== 1) && !(x === exitPos.x && y === exitPos.y)) {
+      maze[y][x] = 1;
+    }
+  }
+  maze[1][1] = 0;
+  maze[exitPos.y][exitPos.x] = 0;
 }
 
-// === УПРАВЛЕНИЕ ЩЕНКОМ ===
-function movePlayer(x, y) {
-  if (!gameActive) return;
-  const rx = Math.max(0, Math.min(window.innerWidth - 60, x - 30));
-  const ry = Math.max(0, Math.min(window.innerHeight - 60, y - 30));
-  playerEl.style.left = rx + 'px';
-  playerEl.style.top = ry + 'px';
+function renderMaze() {
+  mazeEl.innerHTML = '';
+  mazeEl.style.gridTemplateColumns = `repeat(${mazeSize}, 30px)`;
+
+  for (let y = 0; y < mazeSize; y++) {
+    for (let x = 0; x < mazeSize; x++) {
+      const cell = document.createElement('div');
+      cell.className = 'maze-cell';
+      if (maze[y][x] === 1) {
+        cell.classList.add('wall');
+      } else {
+        cell.classList.add('path');
+      }
+
+      // Мусор (20% клеток)
+      if (maze[y][x] === 0 && Math.random() > 0.8 && !(x === 1 && y === 1) && !(x === exitPos.x && y === exitPos.y)) {
+        cell.dataset.trash = '1';
+        cell.textContent = '🗑️';
+        cell.classList.add('trash-maze');
+      }
+
+      // Выход
+      if (x === exitPos.x && y === exitPos.y) {
+        cell.classList.add('exit');
+        cell.textContent = '🚪';
+      }
+
+      // Игрок
+      if (x === playerPos.x && y === playerPos.y) {
+        cell.classList.add('player-maze');
+        const img = document.createElement('img');
+        img.src = puppyImages[selectedPuppy];
+        img.style.width = '24px';
+        img.style.height = '24px';
+        cell.appendChild(img);
+      }
+
+      mazeEl.appendChild(cell);
+    }
+  }
 }
 
-gameScreen.addEventListener('touchmove', e => {
-  e.preventDefault();
-  movePlayer(e.touches[0].clientX, e.touches[0].clientY);
-});
+function startMazeGame() {
+  clearInterval(moveInterval);
+  moveInterval = setInterval(() => {
+    if (!gameActive || selectedMode !== 'maze') return;
 
-gameScreen.addEventListener('mousedown', e => movePlayer(e.clientX, e.clientY));
-gameScreen.addEventListener('mousemove', e => {
-  if (e.buttons === 1) movePlayer(e.clientX, e.clientY);
-});
+    const sensitivity = 20;
+    let moved = false;
 
-// === СОЗДАНИЕ МУСОРА (3 РЕЖИМА) ===
+    if (Math.abs(joystickOffset.x) > sensitivity || Math.abs(joystickOffset.y) > sensitivity) {
+      if (Math.abs(joystickOffset.x) > Math.abs(joystickOffset.y)) {
+        // Горизонталь
+        const dir = joystickOffset.x > 0 ? 1 : -1;
+        const newX = playerPos.x + dir;
+        if (newX >= 0 && newX < mazeSize && maze[playerPos.y][newX] === 0) {
+          playerPos.x = newX;
+          moved = true;
+        }
+      } else {
+        // Вертикаль
+        const dir = joystickOffset.y > 0 ? 1 : -1;
+        const newY = playerPos.y + dir;
+        if (newY >= 0 && newY < mazeSize && maze[newY][playerPos.x] === 0) {
+          playerPos.y = newY;
+          moved = true;
+        }
+      }
+    }
+
+    if (moved) {
+      // Проверка мусора
+      const cellIndex = playerPos.y * mazeSize + playerPos.x;
+      const cell = mazeEl.children[cellIndex];
+      if (cell && cell.dataset.trash) {
+        delete cell.dataset.trash;
+        cell.textContent = '';
+        score += 2;
+        scoreEl.textContent = `Счёт: ${score}`;
+        playSound(soundCollect);
+        // Анимация щенка
+        playerEl.classList.add('collect-jump');
+        setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
+      }
+
+      // Проверка выхода
+      if (playerPos.x === exitPos.x && playerPos.y === exitPos.y) {
+        score += 10;
+        scoreEl.textContent = `Счёт: ${score}`;
+        setTimeout(() => {
+          alert('Ты нашёл выход! 🎉');
+          endGame();
+        }, 300);
+      }
+
+      renderMaze();
+    }
+  }, 150);
+}
+
+// === Обычные режимы (не лабиринт) ===
 function spawnTrash() {
-  if (!gameActive) return;
+  if (!gameActive || selectedMode === 'maze') return;
 
   const type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
   const [minSize, maxSize] = type.sizeRange;
@@ -168,33 +281,25 @@ function spawnTrash() {
   gameScreen.appendChild(trash);
 
   if (selectedMode === 'static') {
-    // Режим 3: неподвижный мусор
     trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
     trash.style.top = Math.random() * (window.innerHeight - size - 80) + 'px';
-    setTimeout(() => {
-      if (trash.parentNode === gameScreen) trash.remove();
-    }, 4000 + Math.random() * 2000);
+    setTimeout(() => { if (trash.parentNode === gameScreen) trash.remove(); }, 4000 + Math.random() * 2000);
 
   } else if (selectedMode === 'to-center') {
-    // Режим 2: со всех сторон к центру
     const side = Math.floor(Math.random() * 4);
     let x, y;
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-
     switch (side) {
-      case 0: x = Math.random() * window.innerWidth; y = -size; break; // сверху
-      case 1: x = window.innerWidth + size; y = Math.random() * window.innerHeight; break; // справа
-      case 2: x = Math.random() * window.innerWidth; y = window.innerHeight + size; break; // снизу
-      case 3: x = -size; y = Math.random() * window.innerHeight; break; // слева
+      case 0: x = Math.random() * window.innerWidth; y = -size; break;
+      case 1: x = window.innerWidth + size; y = Math.random() * window.innerHeight; break;
+      case 2: x = Math.random() * window.innerWidth; y = window.innerHeight + size; break;
+      case 3: x = -size; y = Math.random() * window.innerHeight; break;
     }
-
     trash.style.left = x + 'px';
     trash.style.top = y + 'px';
-
     const dx = (cx - x) / 150;
     const dy = (cy - y) / 150;
-
     function move() {
       if (!gameActive || !trash.parentNode) return;
       let curX = parseFloat(trash.style.left) || 0;
@@ -203,30 +308,18 @@ function spawnTrash() {
       curY += dy;
       trash.style.left = curX + 'px';
       trash.style.top = curY + 'px';
-
-      // Удалить, если далеко от центра (защита)
       const dist = Math.hypot(curX - cx, curY - cy);
-      if (dist > Math.hypot(cx, cy) + 200) {
-        trash.remove();
-        return;
-      }
-
+      if (dist > Math.hypot(cx, cy) + 200) { trash.remove(); return; }
       requestAnimationFrame(move);
     }
     move();
+    setTimeout(() => { if (trash.parentNode === gameScreen) trash.remove(); }, 8000);
 
-    setTimeout(() => {
-      if (trash.parentNode === gameScreen) trash.remove();
-    }, 8000);
-
-  } else {
-    // Режим 1: падает сверху (как раньше)
+  } else { // falling
     trash.style.left = Math.random() * (window.innerWidth - size) + 'px';
     trash.style.top = -size + 'px';
-
     const speed = 0.8 + Math.random() * 1.2;
     const drift = (Math.random() - 0.5) * 0.5;
-
     function move() {
       if (!gameActive || !trash.parentNode) return;
       let top = parseFloat(trash.style.top) || 0;
@@ -236,23 +329,16 @@ function spawnTrash() {
       left = Math.max(0, Math.min(window.innerWidth - size, left));
       trash.style.top = top + 'px';
       trash.style.left = left + 'px';
-      if (top > window.innerHeight) {
-        trash.remove();
-        return;
-      }
+      if (top > window.innerHeight) { trash.remove(); return; }
       requestAnimationFrame(move);
     }
     move();
-
-    setTimeout(() => {
-      if (trash.parentNode === gameScreen) trash.remove();
-    }, 8000);
+    setTimeout(() => { if (trash.parentNode === gameScreen) trash.remove(); }, 8000);
   }
 }
 
-// === ПРОВЕРКА СБОРА ===
 function checkCollection() {
-  if (!gameActive) return;
+  if (!gameActive || selectedMode === 'maze') return;
   const trashes = document.querySelectorAll('.trash');
   const playerRect = playerEl.getBoundingClientRect();
 
@@ -264,6 +350,7 @@ function checkCollection() {
       playerRect.top < trashRect.bottom &&
       playerRect.bottom > trashRect.top
     ) {
+      // Вспышка
       const flash = document.createElement('div');
       flash.className = 'collect-flash';
       flash.style.left = (trashRect.left + trashRect.width / 2 - 40) + 'px';
@@ -271,10 +358,13 @@ function checkCollection() {
       document.body.appendChild(flash);
       setTimeout(() => flash.remove(), 600);
 
+      // Звук, очки, анимация
       playSound(soundCollect);
       const points = parseInt(trash.dataset.points) || 1;
       score += points;
       scoreEl.textContent = `Счёт: ${score}`;
+      playerEl.classList.add('collect-jump');
+      setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
 
       trash.remove();
     }
@@ -283,11 +373,97 @@ function checkCollection() {
   gameLoop = requestAnimationFrame(checkCollection);
 }
 
-// === КОНЕЦ ИГРЫ ===
+// === Управление игроком (для не-лабиринт режимов) ===
+function movePlayer(x, y) {
+  if (!gameActive || selectedMode === 'maze') return;
+  const rx = Math.max(0, Math.min(window.innerWidth - 60, x - 30));
+  const ry = Math.max(0, Math.min(window.innerHeight - 60, y - 30));
+  playerEl.style.left = rx + 'px';
+  playerEl.style.top = ry + 'px';
+}
+
+gameScreen.addEventListener('touchmove', e => {
+  if (selectedMode !== 'maze') {
+    e.preventDefault();
+    movePlayer(e.touches[0].clientX, e.touches[0].clientY);
+  }
+});
+
+gameScreen.addEventListener('mousedown', e => {
+  if (selectedMode !== 'maze') movePlayer(e.clientX, e.clientY);
+});
+
+gameScreen.addEventListener('mousemove', e => {
+  if (selectedMode !== 'maze' && e.buttons === 1) movePlayer(e.clientX, e.clientY);
+});
+
+// === Старт и конец игры ===
+startGameBtn.addEventListener('click', startGame);
+
+function startGame() {
+  if (!selectedPuppy || !selectedMode) return;
+
+  playSound(soundStart);
+  if (musicEnabled) {
+    soundBgMusic.play().catch(e => console.log("Музыка заблокирована:", e));
+  }
+
+  startScreen.classList.add('hidden');
+  gameScreen.classList.remove('hidden');
+
+  score = 0;
+  timeLeft = selectedMode === 'maze' ? 60 : 30; // даём больше времени в лабиринте
+  gameActive = true;
+  scoreEl.textContent = 'Счёт: 0';
+  timerEl.textContent = `Время: ${timeLeft}`;
+
+  document.querySelectorAll('.trash, .collect-flash').forEach(el => el.remove());
+
+  // Скрыть/показать элементы
+  if (selectedMode === 'maze') {
+    playerEl.style.display = 'none';
+    joystickEl.style.display = 'block';
+    mazeEl.style.display = 'block';
+
+    generateMaze();
+    playerPos = { x: 1, y: 1 };
+    renderMaze();
+    setupJoystick();
+    startMazeGame();
+
+    // Таймер только для лабиринта (опционально)
+    clearInterval(window.gameTimer);
+    window.gameTimer = setInterval(() => {
+      timeLeft--;
+      timerEl.textContent = `Время: ${timeLeft}`;
+      if (timeLeft <= 0) endGame();
+    }, 1000);
+
+  } else {
+    playerEl.style.display = 'block';
+    joystickEl.style.display = 'none';
+    mazeEl.style.display = 'none';
+    playerEl.style.backgroundImage = `url(${puppyImages[selectedPuppy]})`;
+
+    clearInterval(window.gameTimer);
+    window.gameTimer = setInterval(() => {
+      timeLeft--;
+      timerEl.textContent = `Время: ${timeLeft}`;
+      if (timeLeft <= 0) endGame();
+    }, 1000);
+
+    clearInterval(window.trashSpawner);
+    window.trashSpawner = setInterval(spawnTrash, selectedMode === 'static' ? 1200 : 800);
+
+    gameLoop = requestAnimationFrame(checkCollection);
+  }
+}
+
 function endGame() {
   gameActive = false;
   clearInterval(window.gameTimer);
   clearInterval(window.trashSpawner);
+  clearInterval(moveInterval);
   cancelAnimationFrame(gameLoop);
 
   playSound(soundEnd);
@@ -298,20 +474,20 @@ function endGame() {
   endScreen.classList.remove('hidden');
 }
 
-// === КНОПКИ ===
+// === Кнопки ===
 restartBtn.addEventListener('click', () => {
   endScreen.classList.add('hidden');
   startScreen.classList.remove('hidden');
   document.querySelectorAll('#puppySelect img').forEach(el => el.classList.remove('selected'));
   modeButtons.forEach(btn => btn.classList.remove('active'));
-  modeButtons[0].classList.add('active'); // по умолчанию — falling
+  modeButtons[0].classList.add('active');
   selectedPuppy = null;
   selectedMode = 'falling';
   startGameBtn.disabled = true;
+  joystickEl.style.display = 'none';
+  mazeEl.style.display = 'none';
 });
 
-exitBtn.addEventListener('click', () => {
-  // можно оставить пустым
-});
+exitBtn.addEventListener('click', () => { /* пусто */ });
 
 document.getElementById('volumeBtn')?.addEventListener('click', toggleMusic);
