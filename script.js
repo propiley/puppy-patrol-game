@@ -164,63 +164,55 @@ function generateMaze() {
 
 function renderMaze() {
   mazeEl.innerHTML = '';
+  mazeEl.style.display = 'grid';
   mazeEl.style.gridTemplateColumns = `repeat(${mazeSize}, 30px)`;
   mazeEl.style.gridTemplateRows = `repeat(${mazeSize}, 30px)`;
+  mazeEl.style.gap = '2px';
+  mazeEl.style.padding = '6px';
+  mazeEl.style.background = '#333';
+  mazeEl.style.borderRadius = '10px';
+  mazeEl.style.justifyContent = 'center';
+  mazeEl.style.alignContent = 'center';
+  mazeEl.style.position = 'absolute';
+  mazeEl.style.top = '50px';
+  mazeEl.style.left = '50%';
+  mazeEl.style.transform = 'translateX(-50%)';
+  mazeEl.style.maxWidth = '90vw';
+  mazeEl.style.width = 'fit-content';
 
   for (let y = 0; y < mazeSize; y++) {
     for (let x = 0; x < mazeSize; x++) {
       const cell = document.createElement('div');
-      cell.className = 'maze-cell';
+      cell.style.width = '30px';
+      cell.style.height = '30px';
+      cell.style.display = 'flex';
+      cell.style.justifyContent = 'center';
+      cell.style.alignItems = 'center';
+      cell.style.borderRadius = '4px';
+      cell.style.fontSize = '20px';
+
       if (maze[y][x] === 1) {
-        cell.classList.add('wall');
+        cell.style.background = '#5d4037'; // wall
       } else {
-        cell.classList.add('path');
+        cell.style.background = '#cfd8dc'; // path
       }
 
       // Мусор
       if (maze[y][x] === 0 && Math.random() > 0.8 && !(x === 1 && y === 1) && !(x === exitPos.x && y === exitPos.y)) {
         cell.dataset.trash = '1';
         cell.textContent = '🗑️';
-        cell.classList.add('trash-maze');
       }
 
       // Выход
       if (x === exitPos.x && y === exitPos.y) {
-        cell.classList.add('exit');
+        cell.style.background = '#4caf50';
+        cell.style.color = 'white';
+        cell.style.fontWeight = 'bold';
         cell.textContent = '🚪';
       }
 
       // Игрок
       if (x === playerPos.x && y === playerPos.y) {
-        cell.classList.add('player-maze');
-        const img = document.createElement('img');
-        img.src = puppyImages[selectedPuppy];
-        img.style.width = '24px';
-        img.style.height = '24px';
-        cell.appendChild(img);
-      }
-
-      mazeEl.appendChild(cell);
-    }
-  }
-}
-
-      // Мусор (20% клеток)
-      if (maze[y][x] === 0 && Math.random() > 0.8 && !(x === 1 && y === 1) && !(x === exitPos.x && y === exitPos.y)) {
-        cell.dataset.trash = '1';
-        cell.textContent = '🗑️';
-        cell.classList.add('trash-maze');
-      }
-
-      // Выход
-      if (x === exitPos.x && y === exitPos.y) {
-        cell.classList.add('exit');
-        cell.textContent = '🚪';
-      }
-
-      // Игрок
-      if (x === playerPos.x && y === playerPos.y) {
-        cell.classList.add('player-maze');
         const img = document.createElement('img');
         img.src = puppyImages[selectedPuppy];
         img.style.width = '24px';
@@ -243,7 +235,6 @@ function startMazeGame() {
 
     if (Math.abs(joystickOffset.x) > sensitivity || Math.abs(joystickOffset.y) > sensitivity) {
       if (Math.abs(joystickOffset.x) > Math.abs(joystickOffset.y)) {
-        // Горизонталь
         const dir = joystickOffset.x > 0 ? 1 : -1;
         const newX = playerPos.x + dir;
         if (newX >= 0 && newX < mazeSize && maze[playerPos.y][newX] === 0) {
@@ -251,7 +242,6 @@ function startMazeGame() {
           moved = true;
         }
       } else {
-        // Вертикаль
         const dir = joystickOffset.y > 0 ? 1 : -1;
         const newY = playerPos.y + dir;
         if (newY >= 0 && newY < mazeSize && maze[newY][playerPos.x] === 0) {
@@ -262,16 +252,19 @@ function startMazeGame() {
     }
 
     if (moved) {
+      renderMaze();
+
       // Проверка мусора
-      const cellIndex = playerPos.y * mazeSize + playerPos.x;
-      const cell = mazeEl.children[cellIndex];
+      const cell = document.elementFromPoint(
+        mazeEl.getBoundingClientRect().left + (playerPos.x + 0.5) * 32,
+        mazeEl.getBoundingClientRect().top + (playerPos.y + 0.5) * 32
+      );
       if (cell && cell.dataset.trash) {
         delete cell.dataset.trash;
         cell.textContent = '';
         score += 2;
         scoreEl.textContent = `Счёт: ${score}`;
         playSound(soundCollect);
-        // Анимация щенка
         playerEl.classList.add('collect-jump');
         setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
       }
@@ -285,8 +278,6 @@ function startMazeGame() {
           endGame();
         }, 300);
       }
-
-      renderMaze();
     }
   }, 150);
 }
@@ -379,7 +370,6 @@ function checkCollection() {
       playerRect.top < trashRect.bottom &&
       playerRect.bottom > trashRect.top
     ) {
-      // Вспышка
       const flash = document.createElement('div');
       flash.className = 'collect-flash';
       flash.style.left = (trashRect.left + trashRect.width / 2 - 40) + 'px';
@@ -387,7 +377,6 @@ function checkCollection() {
       document.body.appendChild(flash);
       setTimeout(() => flash.remove(), 600);
 
-      // Звук, очки, анимация
       playSound(soundCollect);
       const points = parseInt(trash.dataset.points) || 1;
       score += points;
@@ -441,14 +430,13 @@ function startGame() {
   gameScreen.classList.remove('hidden');
 
   score = 0;
-  timeLeft = selectedMode === 'maze' ? 60 : 30; // даём больше времени в лабиринте
+  timeLeft = selectedMode === 'maze' ? 60 : 30;
   gameActive = true;
   scoreEl.textContent = 'Счёт: 0';
   timerEl.textContent = `Время: ${timeLeft}`;
 
   document.querySelectorAll('.trash, .collect-flash').forEach(el => el.remove());
 
-  // Скрыть/показать элементы
   if (selectedMode === 'maze') {
     playerEl.style.display = 'none';
     joystickEl.style.display = 'block';
@@ -460,7 +448,6 @@ function startGame() {
     setupJoystick();
     startMazeGame();
 
-    // Таймер только для лабиринта (опционально)
     clearInterval(window.gameTimer);
     window.gameTimer = setInterval(() => {
       timeLeft--;
@@ -517,6 +504,6 @@ restartBtn.addEventListener('click', () => {
   mazeEl.style.display = 'none';
 });
 
-exitBtn.addEventListener('click', () => { /* пусто */ });
+exitBtn.addEventListener('click', () => {});
 
 document.getElementById('volumeBtn')?.addEventListener('click', toggleMusic);
