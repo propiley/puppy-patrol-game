@@ -21,26 +21,24 @@
 
     <h2 style="margin-top: 20px; font-size: 20px;">Режим игры:</h2>
     <div id="modeSelect">
-  <button class="mode-btn active" data-mode="falling">Падает сверху</button>
-  <button class="mode-btn" data-mode="to-center">Со всех сторон</button>
-  <button class="mode-btn" data-mode="static">Неподвижный мусор</button>
-  <button class="mode-btn" data-mode="maze">Лабиринт</button>
-</div>
+      <button class="mode-btn active" data-mode="falling">Падает сверху</button>
+      <button class="mode-btn" data-mode="to-center">Со всех сторон</button>
+      <button class="mode-btn" data-mode="static">Неподвижный мусор</button>
+      <button class="mode-btn" data-mode="maze">Лабиринт</button>
+    </div>
 
     <button id="startGameBtn" class="btn start-btn" disabled>Начать игру</button>
   </div>
 
   <!-- Игровой экран -->
-<div id="gameScreen" class="screen hidden">
-  <div id="score">Счёт: 0</div>
-  <div id="timer">Время: 30</div>
-  <div id="volumeBtn" class="volume-btn">🔊</div>
-  <div id="player"></div>
-  
-  <!-- НОВОЕ -->
-  <div id="maze"></div>
-  <div id="joystick"><div id="joystick-knob"></div></div>
-</div>
+  <div id="gameScreen" class="screen hidden">
+    <div id="score">Счёт: 0</div>
+    <div id="timer">Время: 30</div>
+    <div id="volumeBtn" class="volume-btn">🔊</div>
+    <div id="player"></div>
+    <div id="maze"></div>
+    <div id="joystick"><div id="joystick-knob"></div></div>
+  </div>
 
   <!-- Финальный экран -->
   <div id="endScreen" class="screen hidden">
