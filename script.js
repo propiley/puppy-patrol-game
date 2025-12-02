@@ -94,9 +94,11 @@ function checkStartReady() {
 
 // === ЛАБИРИНТ ===
 function generateMaze() {
+  // Создаём сетку 15x15
   maze = Array(mazeSize).fill().map(() => Array(mazeSize).fill(1));
   trashPositions = [];
 
+  // Начинаем с (1,1)
   const stack = [{ x: 1, y: 1 }];
   maze[1][1] = 0;
 
@@ -104,10 +106,10 @@ function generateMaze() {
     const current = stack[stack.length - 1];
     const neighbors = [];
     const dirs = [
-      { dx: 0, dy: -2 },
-      { dx: 2, dy: 0 },
-      { dx: 0, dy: 2 },
-      { dx: -2, dy: 0 }
+      { dx: 0, dy: -2 }, // вверх
+      { dx: 2, dy: 0 },  // вправо
+      { dx: 0, dy: 2 },  // вниз
+      { dx: -2, dy: 0 }  // влево
     ];
 
     for (let dir of dirs) {
@@ -128,6 +130,7 @@ function generateMaze() {
     }
   }
 
+  // Выход — случайная свободная клетка
   let exitFound = false;
   while (!exitFound) {
     const x = Math.floor(Math.random() * (mazeSize - 2)) + 1;
@@ -138,6 +141,7 @@ function generateMaze() {
     }
   }
 
+  // Убедимся, что старт и выход — проходы
   maze[1][1] = 0;
   maze[exitPos.y][exitPos.x] = 0;
 
