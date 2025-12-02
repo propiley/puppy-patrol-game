@@ -164,7 +164,8 @@ function generateMaze() {
 
 function renderMaze() {
   mazeEl.innerHTML = '';
-  mazeEl.style.gridTemplateColumns = `repeat(${mazeSize}, 30px)`;
+  mazeEl.style.gridTemplateColumns = `repeat(${mazeSize}, 1fr)`;
+mazeEl.style.gridTemplateRows = `repeat(${mazeSize}, 1fr)`;
 
   for (let y = 0; y < mazeSize; y++) {
     for (let x = 0; x < mazeSize; x++) {
