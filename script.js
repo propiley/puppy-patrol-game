@@ -11,6 +11,9 @@ const exitBtn = document.getElementById('exitBtn');
 const startGameBtn = document.getElementById('startGameBtn');
 const modeButtons = document.querySelectorAll('.mode-btn');
 const mazeEl = document.getElementById('maze');
+const mazeLineContainer = document.getElementById('mazeLineContainer');
+const mazeLineImg = document.getElementById('mazeLineImg');
+const mazeLineCanvas = document.getElementById('mazeLineCanvas');
 
 // Звуки
 const soundCollect = document.getElementById('soundCollect');
@@ -26,12 +29,18 @@ let gameActive = false;
 let gameLoop;
 let musicEnabled = true;
 
-// Лабиринт
+// Лабиринт 15x15
 let maze = [];
 let trashPositions = [];
-const mazeSize = 10;
+const mazeSize = 15;
 let playerPos = { x: 1, y: 1 };
 let exitPos = { x: mazeSize - 2, y: mazeSize - 2 };
+
+// Лабиринт-линия
+let mazeLineActive = false;
+let mazeLineStart = { x: 0, y: 0 };
+let mazeLineEnd = { x: 0, y: 0 };
+let mazeLineGameStarted = false;
 
 // Щенки
 const puppyImages = {
@@ -69,6 +78,10 @@ function toggleMusic() {
   }
 }
 
+function checkStartReady() {
+  startGameBtn.disabled = !(selectedPuppy && selectedMode);
+}
+
 // Выбор щенка и режима
 document.querySelectorAll('#puppySelect img').forEach(img => {
   img.addEventListener('click', () => {
@@ -88,17 +101,11 @@ modeButtons.forEach(btn => {
   });
 });
 
-function checkStartReady() {
-  startGameBtn.disabled = !(selectedPuppy && selectedMode);
-}
-
-// === ЛАБИРИНТ ===
+// === ЛАБИРИНТ 15x15 ===
 function generateMaze() {
-  // Создаём сетку 15x15
   maze = Array(mazeSize).fill().map(() => Array(mazeSize).fill(1));
   trashPositions = [];
 
-  // Начинаем с (1,1)
   const stack = [{ x: 1, y: 1 }];
   maze[1][1] = 0;
 
@@ -106,10 +113,10 @@ function generateMaze() {
     const current = stack[stack.length - 1];
     const neighbors = [];
     const dirs = [
-      { dx: 0, dy: -2 }, // вверх
-      { dx: 2, dy: 0 },  // вправо
-      { dx: 0, dy: 2 },  // вниз
-      { dx: -2, dy: 0 }  // влево
+      { dx: 0, dy: -2 },
+      { dx: 2, dy: 0 },
+      { dx: 0, dy: 2 },
+      { dx: -2, dy: 0 }
     ];
 
     for (let dir of dirs) {
@@ -130,7 +137,6 @@ function generateMaze() {
     }
   }
 
-  // Выход — случайная свободная клетка
   let exitFound = false;
   while (!exitFound) {
     const x = Math.floor(Math.random() * (mazeSize - 2)) + 1;
@@ -141,11 +147,9 @@ function generateMaze() {
     }
   }
 
-  // Убедимся, что старт и выход — проходы
   maze[1][1] = 0;
   maze[exitPos.y][exitPos.x] = 0;
 
-  // Генерация мусора
   for (let y = 1; y < mazeSize - 1; y++) {
     for (let x = 1; x < mazeSize - 1; x++) {
       if (maze[y][x] === 0 && !(x === 1 && y === 1) && !(x === exitPos.x && y === exitPos.y)) {
@@ -259,13 +263,13 @@ function checkMazeCollect() {
     scoreEl.textContent = `Счёт: ${score}`;
     playSound(soundCollect);
     playerEl.classList.add('collect-jump');
-    setout(() => playerEl.classList.remove('collect-jump'), 300);
+    setTimeout(() => playerEl.classList.remove('collect-jump'), 300);
   }
 
   if (playerPos.x === exitPos.x && playerPos.y === exitPos.y) {
     score += 10;
     scoreEl.textContent = `Счёт: ${score}`;
-    setout(() => {
+    setTimeout(() => {
       alert('Ты нашёл выход! 🎉');
       endGame();
     }, 300);
@@ -278,17 +282,136 @@ function startMazeGame() {
   renderMaze();
   setupMazeControls();
 
-  clearInterval(window.gamer);
-  window.gamer = setInterval(() => {
+  clearInterval(window.gameTimer);
+  window.gameTimer = setInterval(() => {
     timeLeft--;
     timerEl.textContent = `Время: ${timeLeft}`;
     if (timeLeft <= 0) endGame();
   }, 1000);
 }
 
+// === ЛАБИРИНТ-ЛИНИЯ ===
+function startMazeLineGame() {
+  mazeLineActive = true;
+  mazeLineGameStarted = false;
+
+  // Устанавливаем размер canvas
+  if (!mazeLineImg.complete) {
+    mazeLineImg.onload = () => {
+      mazeLineCanvas.width = mazeLineImg.naturalWidth;
+      mazeLineCanvas.height = mazeLineImg.naturalHeight;
+      mazeLineStart = { x: 50, y: 50 }; // ЗАМЕНИ НА СВОИ КООРДИНАТЫ!
+      mazeLineEnd = { x: 700, y: 600 }; // ЗАМЕНИ НА СВОИ КООРДИНАТЫ!
+      setupMazeLineControls();
+    };
+  } else {
+    mazeLineCanvas.width = mazeLineImg.naturalWidth;
+    mazeLineCanvas.height = mazeLineImg.naturalHeight;
+    mazeLineStart = { x: 50, y: 50 }; // ЗАМЕНИ НА СВОИ КООРДИНАТЫ!
+    mazeLineEnd = { x: 700, y: 600 }; // ЗАМЕНИ НА СВОИ КООРДИНАТЫ!
+    setupMazeLineControls();
+  }
+
+  mazeLineContainer.style.display = 'block';
+  playerEl.style.display = 'none';
+  mazeEl.style.display = 'none';
+
+  score = 0;
+  scoreEl.textContent = `Счёт: ${score}`;
+  timeLeft = 60; // 60 секунд
+  timerEl.textContent = `Время: ${timeLeft}`;
+
+  clearInterval(window.gameTimer);
+  window.gameTimer = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = `Время: ${timeLeft}`;
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+}
+
+function setupMazeLineControls() {
+  let isTouching = false;
+  let lastX = 0, lastY = 0;
+
+  const handleTouch = (clientX, clientY) => {
+    lastX = clientX;
+    lastY = clientY;
+    checkPosition(lastX, lastY);
+  };
+
+  mazeLineCanvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    isTouching = true;
+    handleTouch(e.touches[0].clientX, e.touches[0].clientY);
+  });
+
+  mazeLineCanvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!isTouching) return;
+    handleTouch(e.touches[0].clientX, e.touches[0].clientY);
+  });
+
+  mazeLineCanvas.addEventListener('touchend', () => {
+    isTouching = false;
+  });
+
+  // Для ПК
+  mazeLineCanvas.addEventListener('mousedown', e => {
+    isTouching = true;
+    handleTouch(e.clientX, e.clientY);
+  });
+
+  mazeLineCanvas.addEventListener('mousemove', e => {
+    if (!isTouching) return;
+    handleTouch(e.clientX, e.clientY);
+  });
+
+  mazeLineCanvas.addEventListener('mouseup', () => {
+    isTouching = false;
+  });
+}
+
+function checkPosition(x, y) {
+  const rect = mazeLineCanvas.getBoundingClientRect();
+  const scaleX = mazeLineImg.naturalWidth / rect.width;
+  const scaleY = mazeLineImg.naturalHeight / rect.height;
+  const imgX = (x - rect.left) * scaleX;
+  const imgY = (y - rect.top) * scaleY;
+
+  // Проверяем, что координаты в пределах изображения
+  if (imgX < 0 || imgX >= mazeLineImg.naturalWidth || imgY < 0 || imgY >= mazeLineImg.naturalHeight) {
+    return;
+  }
+
+  const ctx = mazeLineCanvas.getContext('2d');
+  const pixel = ctx.getImageData(imgX, imgY, 1, 1).data;
+
+  // Белый цвет (R=255, G=255, B=255)
+  if (pixel[0] > 200 && pixel[1] > 200 && pixel[2] > 200) {
+    if (!mazeLineGameStarted) {
+      mazeLineGameStarted = true;
+      playSound(soundStart);
+    }
+
+    const distanceToExit = Math.hypot(imgX - mazeLineEnd.x, imgY - mazeLineEnd.y);
+    if (distanceToExit < 20) {
+      score += 10;
+      scoreEl.textContent = `Счёт: ${score}`;
+      setTimeout(() => {
+        alert('Ты прошёл лабиринт! 🎉');
+        endGame();
+      }, 300);
+    }
+  } else {
+    // Сбился с пути
+    alert('Ой, ты сбился с пути! 😢');
+    endGame();
+  }
+}
+
 // === ОБЫЧНЫЕ РЕЖИМЫ ===
 function spawnTrash() {
-  if (!gameActive || selectedMode === 'maze') return;
+  if (!gameActive || selectedMode === 'maze' || selectedMode === 'maze-line') return;
 
   const type = trashTypes[Math.floor(Math.random() * trashTypes.length)];
   const [minSize, maxSize] = type.sizeRange;
@@ -360,7 +483,7 @@ function spawnTrash() {
 }
 
 function checkCollection() {
-  if (!gameActive || selectedMode === 'maze') return;
+  if (!gameActive || selectedMode === 'maze' || selectedMode === 'maze-line') return;
   const trashes = document.querySelectorAll('.trash');
   const playerRect = playerEl.getBoundingClientRect();
   trashes.forEach(trash => {
@@ -390,7 +513,7 @@ function checkCollection() {
 }
 
 function movePlayer(x, y) {
-  if (!gameActive || selectedMode === 'maze') return;
+  if (!gameActive || selectedMode === 'maze' || selectedMode === 'maze-line') return;
   const rx = Math.max(0, Math.min(window.innerWidth - 60, x - 30));
   const ry = Math.max(0, Math.min(window.innerHeight - 60, y - 30));
   playerEl.style.left = rx + 'px';
@@ -398,18 +521,18 @@ function movePlayer(x, y) {
 }
 
 gameScreen.addEventListener('touchmove', e => {
-  if (selectedMode !== 'maze') {
+  if (selectedMode !== 'maze' && selectedMode !== 'maze-line') {
     e.preventDefault();
     movePlayer(e.touches[0].clientX, e.touches[0].clientY);
   }
 });
 
 gameScreen.addEventListener('mousedown', e => {
-  if (selectedMode !== 'maze') movePlayer(e.clientX, e.clientY);
+  if (selectedMode !== 'maze' && selectedMode !== 'maze-line') movePlayer(e.clientX, e.clientY);
 });
 
 gameScreen.addEventListener('mousemove', e => {
-  if (selectedMode !== 'maze' && e.buttons === 1) movePlayer(e.clientX, e.clientY);
+  if ((selectedMode !== 'maze' && selectedMode !== 'maze-line') && e.buttons === 1) movePlayer(e.clientX, e.clientY);
 });
 
 // === СТАРТ ИГРЫ ===
@@ -422,19 +545,29 @@ function startGame() {
   startScreen.classList.add('hidden');
   gameScreen.classList.remove('hidden');
   score = 0;
-  timeLeft = selectedMode === 'maze' ? 90 : 30; // 90 секунд для 15×15
   gameActive = true;
   scoreEl.textContent = 'Счёт: 0';
-  timerEl.textContent = `Время: ${timeLeft}`;
-  document.querySelectorAll('.trash, .collect-flash').forEach(el => el.remove());
 
   if (selectedMode === 'maze') {
+    timeLeft = 90;
+    timerEl.textContent = `Время: ${timeLeft}`;
     playerEl.style.display = 'none';
     mazeEl.style.display = 'block';
+    mazeLineContainer.style.display = 'none';
     startMazeGame();
+  } else if (selectedMode === 'maze-line') {
+    timeLeft = 60;
+    timerEl.textContent = `Время: ${timeLeft}`;
+    playerEl.style.display = 'none';
+    mazeEl.style.display = 'none';
+    mazeLineContainer.style.display = 'block';
+    startMazeLineGame();
   } else {
+    timeLeft = 30;
+    timerEl.textContent = `Время: ${timeLeft}`;
     playerEl.style.display = 'block';
     mazeEl.style.display = 'none';
+    mazeLineContainer.style.display = 'none';
     playerEl.style.backgroundImage = `url(${puppyImages[selectedPuppy]})`;
     clearInterval(window.gameTimer);
     window.gameTimer = setInterval(() => {
@@ -474,6 +607,7 @@ restartBtn.addEventListener('click', () => {
   selectedMode = 'falling';
   startGameBtn.disabled = true;
   mazeEl.style.display = 'none';
+  mazeLineContainer.style.display = 'none';
 });
 
 exitBtn.addEventListener('click', () => {});
